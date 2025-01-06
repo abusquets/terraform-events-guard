@@ -1,0 +1,13 @@
+.terraform*
+*.log
+*.tfstate
+*.tfstate.backup
+/crash.d/
+__pycache__/
+.DS_Store
+*.swp
+*~
+.env
+# If .gitconfig is in your project directory and you want to track it, REMOVE this line.
+.gitconfig
+.history/
