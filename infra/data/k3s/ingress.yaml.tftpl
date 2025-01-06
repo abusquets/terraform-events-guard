@@ -1,22 +1,4 @@
-# IngressRoute for HTTP traffic (redirection)
-apiVersion: traefik.containo.us/v1alpha1
-kind: IngressRoute
-metadata:
-  name: http-redirect
-  namespace: events-guard
-spec:
-  entryPoints:
-    - web # Entrypoint for HTTP (port 80) - Make sure this is defined in your Traefik static configuration
-  routes:
-  - match: Host(`${domain_name}`) # Matches your domain name
-    kind: Rule
-    middlewares:
-      - name: https-redirect # Middleware for the redirection
-    services:
-      - name: no-op # Dummy service, necessary for Traefik to correctly apply the middleware when no backend service is required
-        port: 80 # Dummy port, not actually used
-
-# Middleware for redirecting to HTTPS
+# Middleware for HTTPS redirection
 apiVersion: traefik.containo.us/v1alpha1
 kind: Middleware
 metadata:
@@ -24,23 +6,59 @@ metadata:
   namespace: events-guard
 spec:
   redirectScheme:
-    scheme: https # Redirect to HTTPS
-    permanent: true # 301 redirect (permanent)
-
-# IngressRoute for HTTPS traffic
+    scheme: https
+    permanent: true
+---
+# IngressRoute for HTTP to HTTPS redirection
 apiVersion: traefik.containo.us/v1alpha1
 kind: IngressRoute
 metadata:
-  name: https-ingress
+  name: http-redirect
   namespace: events-guard
 spec:
   entryPoints:
-    - websecure # Entrypoint for HTTPS (port 443) - Make sure this is defined in your Traefik static configuration
+    - web
   routes:
-  - match: Host(`${domain_name}`) # Matches your domain name
+  - match: Host(`${domain_name}`)
+    kind: Rule
+    middlewares:
+      - name: https-redirect
+    services:
+      - name: no-op # Dummy service, required for the middleware to work
+        port: 80
+---
+# IngressRoute for Frontend (HTTPS)
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: https-ingress-frontend
+  namespace: events-guard
+spec:
+  entryPoints:
+    - websecure
+  routes:
+  - match: Host(`${domain_name}`) && PathPrefix(`/`)
     kind: Rule
     services:
-    - name: frontend # Your frontend service
-      port: 80 # The port your frontend service is listening on *inside* the pod
+    - name: frontend
+      port: 80
   tls:
-    secretName: events-guard-tls # Your TLS secret
+    secretName: events-guard-tls
+---
+# IngressRoute for Backend (HTTPS)
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: https-ingress-backend
+  namespace: events-guard
+spec:
+  entryPoints:
+    - websecure
+  routes:
+  - match: Host(`${domain_name}`) && PathPrefix(`/api`)
+    kind: Rule
+    services:
+    - name: backend
+      port: 80
+  tls:
+    secretName: events-guard-tls
