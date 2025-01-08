@@ -21,6 +21,15 @@ resource "null_resource" "k3s_setup" {
   depends_on = [aws_lightsail_instance.docker_server]
 }
 
+resource "null_resource" "get_kubeconfig" {
+  count = var.enable_k3s_setup ? 1 : 0
+
+  provisioner local-exec {
+    command = "scp -o StrictHostKeyChecking=no -i ${var.my_private_key} ec2-user@${aws_lightsail_static_ip.events_guard_static_ip.ip_address}:/etc/rancher/k3s/k3s.yaml tmp/k3s.yaml"
+  }
+
+}
+
 
 resource "null_resource" "k3s_setup_kubectl_namespace" {
   count = var.enable_k3s_setup ? 1 : 0
@@ -109,8 +118,10 @@ resource "null_resource" "k3s_setup_kubectl_ingress" {
 
   provisioner "remote-exec" {
     inline = [
-      "kubectl apply -f ingress.yaml",
+      "kubectl apply -f ingress.yaml"
     ]
   }
+
   depends_on = [aws_lightsail_instance.docker_server]
+
 }

@@ -11,3 +11,4 @@ __pycache__/
 # If .gitconfig is in your project directory and you want to track it, REMOVE this line.
 .gitconfig
 .history/
+infra/tmp/!.gitkeep
