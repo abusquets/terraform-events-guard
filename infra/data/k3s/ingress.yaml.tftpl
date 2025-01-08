@@ -1,33 +1,20 @@
-# Middleware for HTTPS redirection
-apiVersion: traefik.containo.us/v1alpha1
-kind: Middleware
+# Create the certificate
+apiVersion: cert-manager.io/v1
+kind: Certificate
 metadata:
-  name: https-redirect
+  name: events-guard-tls
   namespace: events-guard
 spec:
-  redirectScheme:
-    scheme: https
-    permanent: true
+  secretName: events-guard-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+  - "${domain_name}"
+
 ---
-# IngressRoute for HTTP to HTTPS redirection
-apiVersion: traefik.containo.us/v1alpha1
-kind: IngressRoute
-metadata:
-  name: http-redirect
-  namespace: events-guard
-spec:
-  entryPoints:
-    - web
-  routes:
-  - match: Host(`${domain_name}`)
-    kind: Rule
-    middlewares:
-      - name: https-redirect
-    services:
-      - name: no-op # Dummy service, required for the middleware to work
-        port: 80
----
-# IngressRoute for Frontend (HTTPS)
+# Link the certificate to the ingress for frontend
+
 apiVersion: traefik.containo.us/v1alpha1
 kind: IngressRoute
 metadata:
@@ -44,8 +31,10 @@ spec:
       port: 80
   tls:
     secretName: events-guard-tls
+
 ---
-# IngressRoute for Backend (HTTPS)
+# Link the certificate to the ingress for frontend
+
 apiVersion: traefik.containo.us/v1alpha1
 kind: IngressRoute
 metadata:
@@ -55,10 +44,70 @@ spec:
   entryPoints:
     - websecure
   routes:
-  - match: Host(`${domain_name}`) && PathPrefix(`/api`)
+  - match: Host(`${domain_name}`) && PathPrefix(`/api/`)
     kind: Rule
     services:
     - name: backend
       port: 80
   tls:
     secretName: events-guard-tls
+
+---
+# Redirect middleware
+
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: https-redirect
+  namespace: events-guard
+spec:
+  redirectScheme:
+    scheme: https
+    permanent: true
+
+---
+# Redirect rule for frontend
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: events-guard-https-redirect@kubernetescrd
+  name: frontend-https-redirect
+  namespace: events-guard
+spec:
+  rules:
+  - host: ${domain_name}
+    http:
+      paths:
+      - backend:
+          service:
+            name: frontend
+            port:
+              number: 80
+        path: /
+        pathType: ImplementationSpecific
+
+---
+
+# Redirect rule for backend
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: events-guard-https-redirect@kubernetescrd
+  name: backend-end-https-redirect
+  namespace: events-guard
+spec:
+  rules:
+  - host: ${domain_name}
+    http:
+      paths:
+      - backend:
+          service:
+            name: backend
+            port:
+              number: 80
+        path: /api/
+        pathType: ImplementationSpecific

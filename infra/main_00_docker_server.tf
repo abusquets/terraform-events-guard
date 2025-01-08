@@ -117,6 +117,13 @@ resource "aws_lightsail_instance_public_ports" "docker_server_firewall" {
     protocol    = "tcp"
   }
 
+  port_info {
+    from_port   = 6443
+    to_port     = 6443
+    protocol    = "tcp"
+  }
+
+
   depends_on = [aws_lightsail_instance.docker_server]
 
 }
