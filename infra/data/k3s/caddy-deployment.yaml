@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: caddy
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: caddy
+  template:
+    metadata:
+      labels:
+        app: caddy
+    spec:
+      containers:
+        - name: caddy
+          image: caddy:2.7
+          ports:
+            - containerPort: 80
+            - containerPort: 443
+          volumeMounts:
+            - name: caddy-config
+              mountPath: /etc/caddy
+      volumes:
+        - name: caddy-config
+          configMap:
+            name: caddy-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: caddy
+  namespace: default
+spec:
+  type: LoadBalancer
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 80
+    - name: https
+      protocol: TCP
+      port: 443
+      targetPort: 443
+  selector:
+    app: caddy
+
