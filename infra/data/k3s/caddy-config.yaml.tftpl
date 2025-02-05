@@ -6,11 +6,12 @@ metadata:
 data:
   Caddyfile: |
     {
-      # Posar el teu correu per a avisos de Let's Encrypt
       email ${issuer_email}
     }
     
-    # Substitueix "example.com" pel teu domini
     ${domain_name} {
-      reverse_proxy hello-world:80
+      reverse_proxy frontend:80
+      handle_path /api* {
+        reverse_proxy eg-api:80
+      }
     }

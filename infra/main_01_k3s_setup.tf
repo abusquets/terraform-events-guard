@@ -56,7 +56,31 @@ resource "null_resource" "k3s_setup_kubectl_namespace" {
 }
 
 
-resource "null_resource" "k3s_setup_kubectl_hello_world1" {
+# resource "null_resource" "k3s_setup_kubectl_hello_world" {
+#   # count = var.enable_k3s_setup ? 1 : 0
+
+#   connection {
+#     type        = "ssh"
+#     user        = "ec2-user"
+#     private_key = file(var.my_private_key)
+#     host         = aws_lightsail_static_ip.events_guard_static_ip.ip_address
+#   }
+
+#   provisioner "file" {
+#     source      = "data/k3s/hello-world-deployment.yaml"
+#     destination = "hello-world-deployment.yaml"
+#   }
+
+#   provisioner "remote-exec" {
+#     inline = [
+#       "kubectl apply -f hello-world-deployment.yaml",
+#     ]
+#   }
+#   depends_on = [aws_lightsail_instance.docker_server]
+# }
+
+
+resource "null_resource" "k3s_setup_kubectl_caddy_config" {
   # count = var.enable_k3s_setup ? 1 : 0
 
   connection {
@@ -66,28 +90,8 @@ resource "null_resource" "k3s_setup_kubectl_hello_world1" {
     host         = aws_lightsail_static_ip.events_guard_static_ip.ip_address
   }
 
-  provisioner "file" {
-    source      = "data/k3s/hello-world-deployment.yaml"
-    destination = "hello-world-deployment.yaml"
-  }
-
-  provisioner "remote-exec" {
-    inline = [
-      "kubectl apply -f hello-world-deployment.yaml",
-    ]
-  }
-  depends_on = [aws_lightsail_instance.docker_server]
-}
-
-
-resource "null_resource" "k3s_setup_kubectl_caddy_config1" {
-  # count = var.enable_k3s_setup ? 1 : 0
-
-  connection {
-    type        = "ssh"
-    user        = "ec2-user"
-    private_key = file(var.my_private_key)
-    host         = aws_lightsail_static_ip.events_guard_static_ip.ip_address
+  triggers = {
+    caddy_config_hash = filemd5("data/k3s/caddy-config.yaml.tftpl")
   }
 
   provisioner "file" {
